@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "Story": {
+      "title": "Story",
+      "description": "A cyberpunk story entry.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "object",
+          "properties": {
+            "en": { "type": "string" },
+            "ru": { "type": "string" }
+          },
+          "required": ["en", "ru"]
+        },
+        "description": {
+          "type": "object",
+          "properties": {
+            "en": { "type": "string" },
+            "ru": { "type": "string" }
+          },
+          "required": ["en", "ru"]
+        },
+        "thumbnailUrl": { "type": "string", "format": "uri" },
+        "youtubeUrl": { "type": "string", "format": "uri" },
+        "downloads": {
+          "type": "object",
+          "properties": {
+            "fb2": { "type": "string" },
+            "epub": { "type": "string" },
+            "pdf": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "thumbnailUrl", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and role information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/stories/{storyId}": {
+      "schema": "Story",
+      "description": "Collection of cyberpunk stories."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile data."
+    }
+  }
+}

@@ -1,0 +1,81 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: stories
+// Document ID: auto-generated
+// Fields:
+//   - title: map (en: string, ru: string) - required
+//   - description: map (en: string, ru: string) - required
+//   - thumbnailUrl: string (url) - required
+//   - youtubeUrl: string (url) - optional
+//   - downloads: map (fb2: string, epub: string, pdf: string) - optional
+//   - createdAt: timestamp - required
+//
+// Collection: users
+// Document ID: userId (auth.uid)
+// Fields:
+//   - uid: string - required
+//   - email: string - required
+//   - role: string (admin, user) - required
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+         (request.auth.token.email == "stinger911@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidStory(data) {
+      return data.title is map && 
+             data.title.en is string && data.title.en.size() > 0 && data.title.en.size() < 200 &&
+             data.title.ru is string && data.title.ru.size() > 0 && data.title.ru.size() < 200 &&
+             data.description is map &&
+             data.description.en is string && data.description.en.size() > 0 && data.description.en.size() < 2000 &&
+             data.description.ru is string && data.description.ru.size() > 0 && data.description.ru.size() < 2000 &&
+             data.thumbnailUrl is string && data.thumbnailUrl.matches("^https?://.*") &&
+             (!('youtubeUrl' in data) || (data.youtubeUrl is string && data.youtubeUrl.matches("^https?://.*"))) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.role in ['admin', 'user'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /stories/{storyId} {
+      // Stories are publicly readable for the landing page
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidStory(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+    }
+  }
+}
