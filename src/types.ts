@@ -10,12 +10,25 @@ export interface Story {
     en: string;
     ru: string;
   };
-  thumbnailUrl: string;
-  youtubeUrl?: string;
+  thumbnailUrl: {
+    en: string;
+    ru: string;
+  };
+  youtubeUrl: {
+    en: string;
+    ru: string;
+  };
   downloads: {
-    fb2?: string;
-    epub?: string;
-    pdf?: string;
+    en: {
+      fb2?: string;
+      epub?: string;
+      pdf?: string;
+    };
+    ru: {
+      fb2?: string;
+      epub?: string;
+      pdf?: string;
+    };
   };
   createdAt: any;
 }
