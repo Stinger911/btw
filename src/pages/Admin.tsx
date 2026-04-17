@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useLanguage } from '../LanguageContext';
-import { Plus, Save, X, Loader2 } from 'lucide-react';
+import { Plus, Save, X, Loader2, Edit3 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Story } from '../types';
 
 export function Admin() {
   const { t } = useLanguage();
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [user] = useAuthState(auth);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [activeTab, setActiveTab] = useState<'en' | 'ru'>('en');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const [formData, setFormData] = useState({
     en: {
@@ -33,6 +39,63 @@ export function Admin() {
     }
   });
 
+  useEffect(() => {
+    const fetchStory = async () => {
+      if (!id) return;
+      setFetching(true);
+      try {
+        const docRef = doc(db, 'stories', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const storyData = docSnap.data() as Story;
+          
+          const getLangVal = (field: any, lang: 'en' | 'ru') => {
+            if (field && typeof field === 'object') return field[lang] || '';
+            return typeof field === 'string' ? field : '';
+          };
+
+          const getDownload = (lang: 'en' | 'ru', type: 'fb2' | 'epub' | 'pdf') => {
+            if (storyData.downloads && (storyData.downloads as any)[lang]) {
+              return (storyData.downloads as any)[lang][type] || '';
+            }
+            if (storyData.downloads && typeof (storyData.downloads as any)[type] === 'string') {
+               return (storyData.downloads as any)[type];
+            }
+            return '';
+          };
+
+          setFormData({
+            en: {
+              title: getLangVal(storyData.title, 'en'),
+              description: getLangVal(storyData.description, 'en'),
+              thumbnailUrl: getLangVal(storyData.thumbnailUrl, 'en'),
+              youtubeUrl: getLangVal(storyData.youtubeUrl, 'en'),
+              fb2: getDownload('en', 'fb2'),
+              epub: getDownload('en', 'epub'),
+              pdf: getDownload('en', 'pdf')
+            },
+            ru: {
+              title: getLangVal(storyData.title, 'ru'),
+              description: getLangVal(storyData.description, 'ru'),
+              thumbnailUrl: getLangVal(storyData.thumbnailUrl, 'ru'),
+              youtubeUrl: getLangVal(storyData.youtubeUrl, 'ru'),
+              fb2: getDownload('ru', 'fb2'),
+              epub: getDownload('ru', 'epub'),
+              pdf: getDownload('ru', 'pdf')
+            }
+          });
+        }
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, `stories/${id}`);
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    fetchStory();
+  }, [id]);
+
   const updateField = (lang: 'en' | 'ru', field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -47,7 +110,7 @@ export function Admin() {
     e.preventDefault();
     setLoading(true);
     try {
-      await addDoc(collection(db, 'stories'), {
+      const storyPayload = {
         title: {
           en: formData.en.title,
           ru: formData.ru.title
@@ -76,17 +139,37 @@ export function Admin() {
             ...(formData.ru.pdf && { pdf: formData.ru.pdf })
           }
         },
-        createdAt: serverTimestamp()
-      });
-      
-      // Reset form
-      setFormData({
-        en: { title: '', description: '', thumbnailUrl: '', youtubeUrl: '', fb2: '', epub: '', pdf: '' },
-        ru: { title: '', description: '', thumbnailUrl: '', youtubeUrl: '', fb2: '', epub: '', pdf: '' }
-      });
-      alert(t('Story added successfully!', 'История успешно добавлена!'));
+        updatedAt: serverTimestamp(),
+        ...(!id && { createdAt: serverTimestamp() })
+      };
+
+      if (id) {
+        await updateDoc(doc(db, 'stories', id), storyPayload);
+        navigate('/');
+      } else {
+        await addDoc(collection(db, 'stories'), storyPayload);
+        // Reset form
+        setFormData({
+          en: { title: '', description: '', thumbnailUrl: '', youtubeUrl: '', fb2: '', epub: '', pdf: '' },
+          ru: { title: '', description: '', thumbnailUrl: '', youtubeUrl: '', fb2: '', epub: '', pdf: '' }
+        });
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'stories');
+      handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, 'stories');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    
+    setLoading(true);
+    try {
+      await deleteDoc(doc(db, 'stories', id));
+      navigate('/');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `stories/${id}`);
     } finally {
       setLoading(false);
     }
@@ -175,42 +258,98 @@ export function Admin() {
 
   return (
     <div className="container mx-auto px-6 py-16">
-      <div className="mb-12 border-b border-cyber-cyan/10 pb-8">
-        <span className="metadata-label text-cyber-red mb-2 block">{t('// SYSTEM_ADMIN_TERMINAL', '// ТЕРМИНАЛ_СИСТЕМНОГО_АДМИНИСТРАТОРА')}</span>
-        <h1 className="font-display text-5xl font-black text-white">{t('INITIALIZE DATA', 'ИНИЦИАЛИЗАЦИЯ ДАННЫХ')}</h1>
+      <div className="mb-12 border-b border-cyber-cyan/10 pb-8 flex items-end justify-between">
+        <div>
+          <span className="metadata-label text-cyber-red mb-2 block">{t('// SYSTEM_ADMIN_TERMINAL', '// ТЕРМИНАЛ_СИСТЕМНОГО_АДМИНИСТРАТОРА')}</span>
+          <h1 className="font-display text-5xl font-black text-white">
+            {id ? t('UPDATE ARCHIVE', 'ОБНОВЛЕНИЕ АРХИВА') : t('INITIALIZE DATA', 'ИНИЦИАЛИЗАЦИЯ ДАННЫХ')}
+          </h1>
+        </div>
+        {id && (
+          <button 
+            onClick={() => navigate('/admin')}
+            className="metadata-label text-cyber-cyan hover:text-white transition-colors mb-2 flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" /> {t('CREATE NEW', 'СОЗДАТЬ НОВУЮ')}
+          </button>
+        )}
       </div>
 
-      <div className="grid gap-12 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <div className="mb-8 flex gap-4 border-b border-cyber-cyan/10 pb-4">
-            <button
-              onClick={() => setActiveTab('en')}
-              className={`bracket-nav ${activeTab === 'en' ? 'active' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-              ENGLISH_DATA
-            </button>
-            <button
-              onClick={() => setActiveTab('ru')}
-              className={`bracket-nav ${activeTab === 'ru' ? 'active' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-              RUSSIAN_DATA
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-12">
-            {activeTab === 'en' ? renderFormFields('en') : renderFormFields('ru')}
-
-            <div className="pt-8 border-t border-cyber-cyan/10">
+      {fetching ? (
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-cyber-cyan" />
+        </div>
+      ) : (
+        <div className="grid gap-12 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <div className="mb-8 flex gap-4 border-b border-cyber-cyan/10 pb-4">
               <button
-                type="submit"
-                disabled={loading}
-                className="cyber-button-primary w-full py-4 text-xl"
+                onClick={() => setActiveTab('en')}
+                className={`bracket-nav ${activeTab === 'en' ? 'active' : 'text-gray-500 hover:text-gray-300'}`}
               >
-                {loading ? t('PROCESSING...', 'ОБРАБОТКА...') : t('UPLOAD TO ARCHIVE', 'ЗАГРУЗИТЬ В АРХИВ')}
+                ENGLISH_DATA
+              </button>
+              <button
+                onClick={() => setActiveTab('ru')}
+                className={`bracket-nav ${activeTab === 'ru' ? 'active' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                RUSSIAN_DATA
               </button>
             </div>
-          </form>
-        </div>
+
+            <form onSubmit={handleSubmit} className="space-y-12">
+              {activeTab === 'en' ? renderFormFields('en') : renderFormFields('ru')}
+
+              <div className="pt-8 border-t border-cyber-cyan/10">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="cyber-button-primary w-full py-4 text-xl"
+                >
+                  {loading ? t('PROCESSING...', 'ОБРАБОТКА...') : (id ? t('PATCH INFOSPHERE', 'ОБНОВИТЬ ИНФОСФЕРУ') : t('UPLOAD TO ARCHIVE', 'ЗАГРУЗИТЬ В АРХИВ'))}
+                </button>
+
+                {id && (
+                  <div className="mt-4 space-y-2">
+                    {!showDeleteConfirm ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(true)}
+                        disabled={loading}
+                        className="w-full border-2 border-cyber-red/30 bg-cyber-red/5 py-4 font-display text-xl text-cyber-red transition-all hover:bg-cyber-red hover:text-white"
+                      >
+                        {t('DELETE FROM ARCHIVE', 'УДАЛИТЬ ИЗ АРХИВА')}
+                      </button>
+                    ) : (
+                      <div className="space-y-4 rounded border border-cyber-red p-4 bg-cyber-red/10">
+                        <p className="text-center font-mono text-xs text-cyber-red uppercase font-bold">
+                          {t('CRITICAL: Confirm data deletion?', 'КРИТИЧЕСКИ: Подтвердить удаление данных?')}
+                        </p>
+                        <div className="flex gap-4">
+                          <button
+                            type="button"
+                            onClick={handleDelete}
+                            disabled={loading}
+                            className="flex-1 bg-cyber-red py-2 font-display text-sm text-white hover:bg-white hover:text-cyber-black"
+                          >
+                            {t('CONFIRM', 'ПОДТВЕРДИТЬ')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowDeleteConfirm(false)}
+                            disabled={loading}
+                            className="flex-1 border border-gray-500 py-2 font-display text-sm text-gray-400 hover:text-white"
+                          >
+                            {t('ABORT', 'ОТМЕНА')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </form>
+          </div>
 
         <div className="space-y-8">
           <div className="cyber-card p-6 border-cyber-red">
@@ -241,6 +380,7 @@ export function Admin() {
           </div>
         </div>
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }

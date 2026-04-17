@@ -65,6 +65,14 @@ service cloud.firestore {
              data.role in ['admin', 'user'];
     }
 
+    function isValidComment(data) {
+      return data.uid == request.auth.uid &&
+             data.userName is string && data.userName.size() > 0 &&
+             (!('userPhoto' in data) || data.userPhoto is string) &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 1000 &&
+             data.createdAt is timestamp;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -74,6 +82,12 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isAdmin() && isValidStory(request.resource.data);
       allow delete: if isAdmin();
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isAuthenticated() && isValidComment(request.resource.data);
+        allow update, delete: if isAdmin() || (isOwner(resource.data.uid));
+      }
     }
 
     match /users/{userId} {

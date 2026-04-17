@@ -30,6 +30,14 @@ export default function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/admin/edit/:id" 
+                element={
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
+                } 
+              />
             </Routes>
             
             <footer className="border-t border-cyber-cyan/10 bg-cyber-dark/50 py-8 text-center">

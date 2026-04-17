@@ -3,7 +3,9 @@ import { Story } from '../types';
 import { useLanguage } from '../LanguageContext';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Download, Youtube } from 'lucide-react';
+import { Download, Youtube, Edit3 } from 'lucide-react';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase';
 
 interface StoryCardProps {
   story: Story;
@@ -11,6 +13,9 @@ interface StoryCardProps {
 
 export function StoryCard({ story }: StoryCardProps) {
   const { language, t } = useLanguage();
+  const [user] = useAuthState(auth);
+  
+  const isAdmin = user?.email === 'stinger911@gmail.com';
 
   // Helper to safely access nested language data or fallback to legacy top-level data
   const getLangValue = (obj: any, lang: string) => {
@@ -68,17 +73,31 @@ export function StoryCard({ story }: StoryCardProps) {
           <p className="line-clamp-2 text-sm text-gray-400 leading-relaxed font-sans">
             {story.description[language]}
           </p>
-          
-          <div className="mt-6 flex items-center justify-between">
-            <span className="metadata-label text-[9px] opacity-40">
-              ID: {story.id.slice(0, 8)}
-            </span>
+        </div>
+      </Link>
+
+      <div className="px-6 pb-6">
+        <div className="flex items-center justify-between">
+          <span className="metadata-label text-[9px] opacity-40">
+            ID: {story.id.slice(0, 8)}
+          </span>
+          <div className="flex items-center gap-4">
+            {isAdmin && (
+              <Link 
+                to={`/admin/edit/${story.id}`}
+                className="metadata-label text-cyber-cyan hover:text-white transition-colors flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Edit3 className="h-3 w-3" />
+                {t('EDIT', 'ИЗМ.')}
+              </Link>
+            )}
             <span className="font-display text-xs font-bold text-cyber-cyan opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-1">
               {t('> ACCESS_DATA', '> ДОСТУП_К_ДАННЫМ')}
             </span>
           </div>
         </div>
-      </Link>
+      </div>
     </motion.div>
   );
 }

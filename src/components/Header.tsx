@@ -14,8 +14,12 @@ export function Header() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
+      alert(t(
+        `Login Error: ${error.message}. Please ensure btw.lab18.net is added to "Authorized domains" in Firebase Console.`,
+        `Ошибка входа: ${error.message}. Убедитесь, что btw.lab18.net добавлен в "Авторизованные домены" в консоли Firebase.`
+      ));
     }
   };
 

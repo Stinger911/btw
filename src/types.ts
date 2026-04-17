@@ -38,3 +38,12 @@ export interface UserProfile {
   email: string;
   role: 'admin' | 'user';
 }
+
+export interface LocalComment {
+  id: string;
+  uid: string;
+  userName: string;
+  userPhoto?: string;
+  text: string;
+  createdAt: any;
+}

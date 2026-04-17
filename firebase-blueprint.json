@@ -61,6 +61,19 @@
       },
       "required": ["title", "description", "thumbnailUrl", "createdAt"]
     },
+    "StoryComment": {
+      "title": "StoryComment",
+      "description": "A local comment on a story.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "userName", "text", "createdAt"]
+    },
     "UserProfile": {
       "title": "UserProfile",
       "description": "User profile and role information.",
@@ -81,6 +94,10 @@
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "User profile data."
+    },
+    "/stories/{storyId}/comments/{commentId}": {
+      "schema": "StoryComment",
+      "description": "Local comments for a specific story."
     }
   }
 }
