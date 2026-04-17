@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Story } from '../types';
 import { StoryCard } from './StoryCard';
 import { useLanguage } from '../LanguageContext';
@@ -21,8 +21,8 @@ export function StoryList() {
       setStories(storiesData);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching stories:", error);
       setLoading(false);
+      handleFirestoreError(error, OperationType.LIST, 'stories');
     });
 
     return () => unsubscribe();

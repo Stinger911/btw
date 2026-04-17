@@ -21,14 +21,40 @@
           },
           "required": ["en", "ru"]
         },
-        "thumbnailUrl": { "type": "string", "format": "uri" },
-        "youtubeUrl": { "type": "string", "format": "uri" },
+        "thumbnailUrl": {
+          "type": "object",
+          "properties": {
+            "en": { "type": "string", "format": "uri" },
+            "ru": { "type": "string", "format": "uri" }
+          },
+          "required": ["en", "ru"]
+        },
+        "youtubeUrl": {
+          "type": "object",
+          "properties": {
+            "en": { "type": "string", "format": "uri" },
+            "ru": { "type": "string", "format": "uri" }
+          }
+        },
         "downloads": {
           "type": "object",
           "properties": {
-            "fb2": { "type": "string" },
-            "epub": { "type": "string" },
-            "pdf": { "type": "string" }
+            "en": {
+              "type": "object",
+              "properties": {
+                "fb2": { "type": "string" },
+                "epub": { "type": "string" },
+                "pdf": { "type": "string" }
+              }
+            },
+            "ru": {
+              "type": "object",
+              "properties": {
+                "fb2": { "type": "string" },
+                "epub": { "type": "string" },
+                "pdf": { "type": "string" }
+              }
+            }
           }
         },
         "createdAt": { "type": "string", "format": "date-time" }

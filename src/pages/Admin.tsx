@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { db, auth } from '../firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useLanguage } from '../LanguageContext';
@@ -86,8 +86,7 @@ export function Admin() {
       });
       alert(t('Story added successfully!', 'История успешно добавлена!'));
     } catch (error) {
-      console.error("Error adding story:", error);
-      alert(t('Error adding story.', 'Ошибка при добавлении истории.'));
+      handleFirestoreError(error, OperationType.CREATE, 'stories');
     } finally {
       setLoading(false);
     }

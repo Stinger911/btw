@@ -7,9 +7,9 @@
 // Fields:
 //   - title: map (en: string, ru: string) - required
 //   - description: map (en: string, ru: string) - required
-//   - thumbnailUrl: string (url) - required
-//   - youtubeUrl: string (url) - optional
-//   - downloads: map (fb2: string, epub: string, pdf: string) - optional
+//   - thumbnailUrl: map (en: string, ru: string) - required
+//   - youtubeUrl: map (en: string, ru: string) - optional
+//   - downloads: map (en: map, ru: map) - optional
 //   - createdAt: timestamp - required
 //
 // Collection: users
@@ -39,8 +39,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
-         (request.auth.token.email == "stinger911@gmail.com" && request.auth.token.email_verified == true));
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') || 
+         request.auth.token.email == "stinger911@gmail.com"); 
     }
 
     function isValidStory(data) {
@@ -48,10 +49,13 @@ service cloud.firestore {
              data.title.en is string && data.title.en.size() > 0 && data.title.en.size() < 200 &&
              data.title.ru is string && data.title.ru.size() > 0 && data.title.ru.size() < 200 &&
              data.description is map &&
-             data.description.en is string && data.description.en.size() > 0 && data.description.en.size() < 2000 &&
-             data.description.ru is string && data.description.ru.size() > 0 && data.description.ru.size() < 2000 &&
-             data.thumbnailUrl is string && data.thumbnailUrl.matches("^https?://.*") &&
-             (!('youtubeUrl' in data) || (data.youtubeUrl is string && data.youtubeUrl.matches("^https?://.*"))) &&
+             data.description.en is string && data.description.en.size() > 0 && data.description.en.size() < 5000 &&
+             data.description.ru is string && data.description.ru.size() > 0 && data.description.ru.size() < 5000 &&
+             data.thumbnailUrl is map &&
+             data.thumbnailUrl.en is string && data.thumbnailUrl.en.matches("^https?://.*") &&
+             data.thumbnailUrl.ru is string && data.thumbnailUrl.ru.matches("^https?://.*") &&
+             (!('youtubeUrl' in data) || (data.youtubeUrl is map)) &&
+             (!('downloads' in data) || (data.downloads is map)) &&
              data.createdAt is timestamp;
     }
 

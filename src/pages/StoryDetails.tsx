@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Story } from '../types';
 import { useLanguage } from '../LanguageContext';
 import { Download, Youtube, ArrowLeft, Loader2, MessageSquare } from 'lucide-react';
@@ -29,7 +29,7 @@ export function StoryDetails() {
           setStory({ id: docSnap.id, ...docSnap.data() } as Story);
         }
       } catch (error) {
-        console.error("Error fetching story:", error);
+        handleFirestoreError(error, OperationType.GET, `stories/${id}`);
       } finally {
         setLoading(false);
       }
